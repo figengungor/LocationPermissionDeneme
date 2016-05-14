@@ -1,0 +1,10 @@
+<resources>
+    <string name="app_name">LocationPermissionDeneme</string>
+    <string name="latitude">Enlem</string>
+    <string name="longitude">Boylam</string>
+    <string name="empty">---------</string>
+    <string name="location_services_not_enabled">Konum Servisleri Aktif Değil</string>
+    <string name="open_location_settings">Konum ayarlarını açıp Gps veya WI-FI ve Mobil ağları kullanmayı aktifleştiriniz.</string>
+    <string name="cancel">İptal</string>
+    <string name="OK">Tamam</string>
+</resources>
