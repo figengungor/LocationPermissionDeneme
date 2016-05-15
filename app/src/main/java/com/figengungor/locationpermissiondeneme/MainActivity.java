@@ -58,26 +58,7 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
         locationButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                if (ContextCompat.checkSelfPermission(MainActivity.this, Manifest.permission.ACCESS_FINE_LOCATION)
-                        == PackageManager.PERMISSION_GRANTED ) {
-                    if(mGoogleApiClient.isConnected()) {
-                        Location lastLocation = LocationServices.FusedLocationApi.getLastLocation(mGoogleApiClient);
-
-                        if (lastLocation != null) {
-                            double lat = lastLocation.getLatitude(), lon = lastLocation.getLongitude();
-                            latitudeTV.setText(lat + "");
-                            longitudeTV.setText(lon + "");
-                            Toast.makeText(MainActivity.this, "lat: " + lat + " lon: " + lon, Toast.LENGTH_LONG).show();
-                        }
-                    }
-                    else{
-                        mGoogleApiClient.connect();
-                    }
-
-                }
-                else {
                     checkLocationProvider();
-                }
             }
         });
 
@@ -113,7 +94,18 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
                     });
             dialog.show();
         } else {
-            getPermissionToAccessUserLocation();
+            if (ContextCompat.checkSelfPermission(MainActivity.this, Manifest.permission.ACCESS_FINE_LOCATION)
+                    == PackageManager.PERMISSION_GRANTED ) {
+                if(mGoogleApiClient.isConnected()) {
+                    displayLocation();
+                }
+                else{
+                    mGoogleApiClient.connect();
+                }
+            }
+            else {
+                getPermissionToAccessUserLocation();
+            }
         }
     }
 
@@ -140,6 +132,15 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
         //Konum izni verilmedi ise ActivityCompat.requestPermissions ile izni talep ediyoruz.
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION)
                 != PackageManager.PERMISSION_GRANTED) {
+
+            // Eğer showRationale true dönerse , kullanıcıyı ikna etmek üzere neden bu izne ihtiyacımız olduğunu açıkladığımız bir dialog oluşturuyoruz.
+            // Eğer ikna olursa izin diyalogumuzu bir daha gösteriyoruz.İkna olmazsa yapacak bişi yok, bu izin ile yapılacak işlemi gerçekleştirmiyoruz.
+            if( ActivityCompat.shouldShowRequestPermissionRationale(this,
+                    Manifest.permission.ACCESS_FINE_LOCATION)) {
+                showRationale();
+                return;
+            }
+
             //ACCESS_FINE_LOCATION_PERMISSIONS_REQUEST integer kodumuz ile ACCESS_FINE_LOCATION konum izni talebinde
             //bulunuyoruz. Karşımıza izin isteyen bir diyalog çıkacak. onRequestPermissionsResult
             //methodu içinde verdiğiniz cevaba göre işlemler  yapılacaktır.
@@ -147,9 +148,9 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
                     ACCESS_FINE_LOCATION_PERMISSIONS_REQUEST);
 
         }
-        //Konum izni verildi ise, oluşturmuş olduğumuz GoogleApiClient objesine bağlanıyoruz.
+        //Konum izni verildi ise, konumu gösteren methodu çağırıyoruz.
         else {
-            mGoogleApiClient.connect();
+            displayLocation();
 
         }
     }
@@ -159,15 +160,11 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
                                            int[] grantResults) {
         if (requestCode == ACCESS_FINE_LOCATION_PERMISSIONS_REQUEST) {
             if (grantResults.length == 1 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                mGoogleApiClient.connect(); //izni kapmışız, bağlanabilirz.
+                displayLocation();
             } else if (grantResults[0] == PackageManager.PERMISSION_DENIED) {
-                //izni alamamışız =( , kullanıcıyı neden bu izne ihtiyacımız olduğuna ikna etmemiz gerekir. Ama çokta ısrarcı olmamalıyız.
-                //Bu durumda devreye PermissionRationale giriyor. shouldShowRequestPermissionRationale methodu mantıklı bir açıklama gösterilip gösterilmeyeceğine
-                //dair boolean bir değer dönüyor.Eğer kullanıcı izin diyalogunda "Bir daha gösterme" seçeneğini seçip, reddederse, showRationale boolean değerimiz false dönecektir.
-                //Ve bir daha gösterme seçeneğini seçtiği için artık izin alma diyalogu da çıkmayacaktır. Bunun için kullanıcının uygulama ayarlarına gidip, izinler kısmında lokasyon iznini aktif etmesi gerekir.
                 boolean showRationale = ActivityCompat.shouldShowRequestPermissionRationale(this,
                         Manifest.permission.ACCESS_FINE_LOCATION);
-                //Yukarıda bahsettiğimiz durum gerçekleştiği zaman, bir Snackbar ile kullanıcıyı uygulama ayarları sayfasına yönlendiriyoruz.
+                //Eğer kullanıcı bir daha sorma seçeneğini seçip izni reddederse, bir Snackbar ile kullanıcıyı uygulama ayarları sayfasına yönlendiriyoruz.
                 if (!showRationale) {
                     Snackbar snackbar = Snackbar.make(container, "Konuma erişim izni vermek için Ayarlar sayfasına gidin.", Snackbar.LENGTH_LONG);
                     snackbar.setAction("Ayarlar", new View.OnClickListener() {
@@ -181,11 +178,6 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
                         }
                     });
                     snackbar.show();
-                }
-                // Eğer showRationale true dönerse , kullanıcıyı ikna etmek üzere neden bu izne ihtiyacımız olduğunu açıkladığımız bir dialog oluşturuyoruz.
-                // Eğer ikna olursa izin diyalogumuzu bir daha gösteriyoruz.İkna olmazsa yapacak bişi yok, bu izin ile yapılacak işlemi gerçekleştirmiyoruz.
-                else {
-                    showRationale();
                 }
             }
         }
@@ -229,15 +221,7 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
     public void onConnected(Bundle bundle) {
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION)
                 == PackageManager.PERMISSION_GRANTED) {
-            Location lastLocation = LocationServices.FusedLocationApi.getLastLocation(mGoogleApiClient);
-
-            if (lastLocation != null) {
-                double lat = lastLocation.getLatitude(), lon = lastLocation.getLongitude();
-                latitudeTV.setText(lat+"");
-                longitudeTV.setText(lon + "");
-                Toast.makeText(this, "lat: " + lat + " lon: " + lon, Toast.LENGTH_LONG).show();
-            }
-
+            displayLocation();
         }
     }
 
@@ -254,10 +238,7 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
     @Override
     protected void onStart() {
         super.onStart();
-        if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION)
-                == PackageManager.PERMISSION_GRANTED) {
-            mGoogleApiClient.connect();
-        }
+        mGoogleApiClient.connect();
     }
 
     @Override
@@ -265,5 +246,16 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
         if (mGoogleApiClient.isConnected() || mGoogleApiClient.isConnecting())
             mGoogleApiClient.disconnect();
         super.onStop();
+    }
+
+    private void displayLocation() {
+        Location lastLocation = LocationServices.FusedLocationApi.getLastLocation(mGoogleApiClient);
+
+        if (lastLocation != null) {
+            double lat = lastLocation.getLatitude(), lon = lastLocation.getLongitude();
+            latitudeTV.setText(lat + "");
+            longitudeTV.setText(lon + "");
+            Toast.makeText(MainActivity.this, "lat: " + lat + " lon: " + lon, Toast.LENGTH_LONG).show();
+        }
     }
 }
